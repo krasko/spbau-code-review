@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_id": "war-of-viruses",
+    "project_number": "555379223441",
+    "name": "War of Viruses"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555379223441:android:4e52e0b2e6191737",
+        "client_id": "android:ru.spbau.lapshin.warofviruses",
+        "client_type": 1,
+        "android_client_info": {
+          "package_name": "ru.spbau.lapshin.warofviruses"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "cloud_messaging_service": {
+          "status": 2,
+          "apns_config": []
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "google_signin_service": {
+          "status": 1
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555379223441:android:8cbb869ae252bc24",
+        "client_id": "android:net.ldvsoft.warofviruses",
+        "client_type": 1,
+        "android_client_info": {
+          "package_name": "net.ldvsoft.warofviruses"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "555379223441-39ngvlrggoqcapplpgqgkldhes5ntjg0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "net.ldvsoft.warofviruses",
+            "certificate_hash": "447214B9DF6574A2549B930640A03EA4DE9303C4"
+          }
+        }
+      ],
+      "api_key": [],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "cloud_messaging_service": {
+          "status": 2,
+          "apns_config": []
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "google_signin_service": {
+          "status": 2
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "client_info": [],
+  "ARTIFACT_VERSION": "1"
+}

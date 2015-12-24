@@ -1,0 +1,16 @@
+[Unit]
+Description=War of Viruses server
+After=nginx.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=cgi-warofviruses
+Group=cgi-warofviruses
+Environment="JAVA_OPTS=-Xms128M -Xmx128M"
+ExecStart=/opt/war-of-viruses-server/bin/server
+SuccessExitStatus=143
+MemoryLimit=130M
+CPUQuota=10%
