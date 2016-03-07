@@ -22,14 +22,13 @@ public class GameReplay {
      */
     GameReplay(List<GameEvent> gameEventHistory, Player crossPlayer, Player zeroPlayer) {
         GameLogic gameLogic = new GameLogic();
-        gameLogic.newGame();
         this.crossPlayer = crossPlayer;
         this.zeroPlayer = zeroPlayer;
         gameStates = new ArrayList<>();
         gameStates.add(new GameLogic(gameLogic));
         for (GameEvent event : gameEventHistory) {
-            event.applyEvent(gameLogic);
-            gameStates.add(new GameLogic(gameLogic));
+            gameLogic = event.applyEvent(gameLogic);
+            gameStates.add(gameLogic);
         }
         currentEventNumber = 0;
     }

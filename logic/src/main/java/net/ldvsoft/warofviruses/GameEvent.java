@@ -58,23 +58,22 @@ public class GameEvent implements Serializable {
         return new GameEvent(turnX, turnY, number, GameEventType.TURN_EVENT);
     }
 
-    public void applyEvent(GameLogic logic) {
+    public GameLogic applyEvent(GameLogic logic) {
         switch(type) {
             case TURN_EVENT:
-                logic.doTurn(turnX, turnY);
-                break;
+                return logic.doTurn(turnX, turnY);
 
             case SKIP_TURN_EVENT:
-                logic.skipTurn();
-                break;
+                return logic.skipTurn();
 
             case CROSS_GIVE_UP_EVENT:
-                logic.giveUp(GameLogic.PlayerFigure.CROSS);
-                break;
+                return logic.giveUp(GameLogic.PlayerFigure.CROSS);
 
             case ZERO_GIVE_UP_EVENT:
-                logic.giveUp(GameLogic.PlayerFigure.ZERO);
-                break;
+                return logic.giveUp(GameLogic.PlayerFigure.ZERO);
+
+            default:
+                return null;
         }
     }
 }

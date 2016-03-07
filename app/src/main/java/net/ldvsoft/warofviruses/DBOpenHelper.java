@@ -39,8 +39,10 @@ public class DBOpenHelper extends SQLiteOpenHelper implements DBProvider {
             " INT UNSIGNED NOT NULL, " + COLOR_CROSS + " INT UNSIGNED NOT NULL, " + COLOR_ZERO + " INT UNSIGNED NOT NULL, " +
             INVITATION_TARGET + " INTEGER NULL, PRIMARY KEY (" + ID + "), FOREIGN KEY (" + INVITATION_TARGET + ") REFERENCES " +
             USER_TABLE + " (" + ID + ") ON DELETE CASCADE ON UPDATE CASCADE);";
+
     private static DBOpenHelper instance;
     private Context context;
+
     private static final String DROP_GAME_TABLE = "DROP TABLE IF EXISTS " + GAME_TABLE + ";";
     private static final String DROP_TURN_TABLE = "DROP TABLE IF EXISTS " + TURN_TABLE + ";";
     private static final String DROP_USER_TABLE = "DROP TABLE IF EXISTS " + USER_TABLE + ";";
@@ -246,5 +248,12 @@ public class DBOpenHelper extends SQLiteOpenHelper implements DBProvider {
         userCursor.close();
 
         return user;
+    }
+
+    public void deleteGameById(long gameID) {
+        Object [] params = new Object[1];
+        params[0] = gameID;
+        getWritableDatabase().execSQL(DELETE_GAME_TURNS_BY_ID, params);
+        getWritableDatabase().execSQL(DELETE_GAME_BY_ID, params);
     }
 }

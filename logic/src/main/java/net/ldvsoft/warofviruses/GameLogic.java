@@ -1,7 +1,7 @@
 package net.ldvsoft.warofviruses;
 
-import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -9,17 +9,35 @@ import java.util.ListIterator;
  * Created by Сева on 21.10.2015.
  */
 public class GameLogic {
-    private ArrayList<GameEvent> events;
-    private ArrayList<GameEvent> crossesEvents;
-    private ArrayList<GameEvent> zeroesEvents;
+    private List<GameEvent> events = new ArrayList<>();
+    private List<GameEvent> crossesEvents = new ArrayList<>();
+    private List<GameEvent> zeroesEvents = new ArrayList<>();
 
     public static final int BOARD_SIZE = 10;
+    private boolean isPlayerBlocked = false;
 
     public List<GameEvent> getEventHistory() {
         return events;
     }
 
-    public enum CellType {CROSS, ZERO, DEAD_CROSS, DEAD_ZERO, EMPTY}
+    public enum CellType {
+        CROSS, ZERO, DEAD_CROSS, DEAD_ZERO, EMPTY;
+
+        public PlayerFigure getOwner() {
+            switch (this) {
+                case CROSS:
+                case DEAD_ZERO:
+                    return PlayerFigure.CROSS;
+                case ZERO:
+                case DEAD_CROSS:
+                    return PlayerFigure.ZERO;
+                case EMPTY:
+                default:
+                    return PlayerFigure.NONE;
+            }
+        }
+    }
+
     public enum PlayerFigure {CROSS, ZERO, NONE}
     public enum GameState {NOT_RUNNING, RUNNING, DRAW, CROSS_WON, ZERO_WON}
 
@@ -27,9 +45,6 @@ public class GameLogic {
         private CellType cellType = CellType.EMPTY;
         private boolean canMakeTurn = false;
         private boolean isActive = false;
-
-        public Cell() {
-        }
 
         public Cell(CellType cellType, boolean canMakeTurn) {
             this.cellType = cellType;
@@ -46,21 +61,11 @@ public class GameLogic {
             isActive = cell.isActive;
         }
 
-        public PlayerFigure getOwner() {
-            if (cellType == CellType.ZERO || cellType == CellType.DEAD_CROSS) {
-                return PlayerFigure.ZERO;
-            } else if (cellType == CellType.CROSS || cellType == CellType.DEAD_ZERO) {
-                return PlayerFigure.CROSS;
-            } else {
-                return PlayerFigure.NONE;
-            }
-        }
-
         public boolean isActive() {
             return isActive;
         }
 
-        public void setOwner(PlayerFigure newOwner) {
+        private void setOwner(PlayerFigure newOwner) {
             if (newOwner == PlayerFigure.CROSS) {
                 cellType = CellType.CROSS;
             } else if (newOwner == PlayerFigure.ZERO) {
@@ -82,7 +87,7 @@ public class GameLogic {
             return canMakeTurn;
         }
 
-        public void setOwnerOnDead(PlayerFigure newOwner) {
+        private void setOwnerOnDead(PlayerFigure newOwner) {
             if (newOwner == PlayerFigure.CROSS) {
                 cellType = CellType.DEAD_ZERO;
             } else {
@@ -108,9 +113,8 @@ public class GameLogic {
 
     public static GameLogic deserialize(List<GameEvent> events) {
         GameLogic logic = new GameLogic();
-        logic.newGame();
         for (GameEvent event : events) {
-            event.applyEvent(logic);
+            logic = event.applyEvent(logic);
         }
         return logic;
     }
@@ -118,9 +122,14 @@ public class GameLogic {
     public GameLogic() {
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
-                board[i][j] = new Cell();
+                board[i][j] = new Cell(CellType.EMPTY, false);
             }
         }
+        previousTurnSkipped = false;
+        currentPlayerFigure = PlayerFigure.CROSS;
+        currentGameState = GameState.RUNNING;
+        updateGameState();
+
     }
 
     public GameLogic(GameLogic logic) {
@@ -139,29 +148,16 @@ public class GameLogic {
         zeroesEvents = new ArrayList<>(logic.zeroesEvents);
     }
 
-    public void newGame() {
-        events = new ArrayList<>();
-        crossesEvents = new ArrayList<>();
-        zeroesEvents = new ArrayList<>();
-        currentTurn = 0;
-        currentMiniturn = 0;
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                board[i][j] = new Cell(CellType.EMPTY, false);
-            }
-        }
-        previousTurnSkipped = false;
-        currentPlayerFigure = PlayerFigure.CROSS;
-        currentGameState = GameState.RUNNING;
-        updateGameState();
-    }
-
     public GameState getCurrentGameState() {
         return currentGameState;
     }
 
-    static boolean isInside(int pos) {
+    static private boolean isInside(int pos) {
         return pos >= 0 && pos < BOARD_SIZE;
+    }
+
+    public boolean isBlocked() {
+        return isPlayerBlocked;
     }
 
     public int getCurrentTurn() {
@@ -179,16 +175,16 @@ public class GameLogic {
     private void updateAdjacentCells(int x, int y) {
         board[x][y].isActive = true;
         for (int[] adjacentDirection : ADJACENT_DIRECTIONS) {
-            int dx = x + adjacentDirection[0], dy = y + adjacentDirection[1];
-            if (isInside(dx) && isInside(dy)) {
-                if ((board[dx][dy].getOwner() == getOpponent(currentPlayerFigure) && !board[dx][dy].isDead()) ||
-                        board[dx][dy].cellType == CellType.EMPTY) {
-                    board[dx][dy].canMakeTurn = true;
+            int newX = x + adjacentDirection[0], newY = y + adjacentDirection[1];
+            if (isInside(newX) && isInside(newY)) {
+                if ((board[newX][newY].cellType.getOwner() == getOpponentPlayerFigure(currentPlayerFigure) && !board[newX][newY].isDead()) ||
+                        board[newX][newY].cellType == CellType.EMPTY) {
+                    board[newX][newY].canMakeTurn = true;
                 }
 
-                if (!board[dx][dy].isActive) {
-                    if (board[dx][dy].isDead() && board[dx][dy].getOwner() == currentPlayerFigure) {
-                        updateAdjacentCells(dx, dy);
+                if (!board[newX][newY].isActive) {
+                    if (board[newX][newY].isDead() && board[newX][newY].cellType.getOwner() == currentPlayerFigure) {
+                        updateAdjacentCells(newX, newY);
                     }
                 }
             }
@@ -199,7 +195,12 @@ public class GameLogic {
         return board[x][y];
     }
 
-    public PlayerFigure getOpponent(PlayerFigure curPlayerFigure) {
+    public void blockCurrentPlayer() {
+        isPlayerBlocked = true;
+        updateGameState();
+    }
+
+    public static PlayerFigure getOpponentPlayerFigure(PlayerFigure curPlayerFigure) {
         switch (curPlayerFigure) {
             case CROSS:
                 return PlayerFigure.ZERO;
@@ -223,7 +224,7 @@ public class GameLogic {
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 if (!board[i][j].isDead() && board[i][j].cellType != CellType.EMPTY) {
-                    if (board[i][j].getOwner() == PlayerFigure.CROSS) {
+                    if (board[i][j].cellType.getOwner() == PlayerFigure.CROSS) {
                         isCrossAlive = true;
                     } else {
                         isZeroAlive = true;
@@ -244,11 +245,14 @@ public class GameLogic {
                 crossWon();
             }
         }
+        if (isPlayerBlocked) {
+            return;
+        }
 
         if (currentPlayerFigure != PlayerFigure.NONE) {
             for (int i = 0; i < BOARD_SIZE; i++) {
                 for (int j = 0; j < BOARD_SIZE; j++) {
-                    if (!board[i][j].isActive && board[i][j].getOwner() == currentPlayerFigure && !board[i][j].isDead()) {
+                    if (!board[i][j].isActive && board[i][j].cellType.getOwner() == currentPlayerFigure && !board[i][j].isDead()) {
                         updateAdjacentCells(i, j);
                     }
                 }
@@ -261,7 +265,6 @@ public class GameLogic {
         if (currentTurn == 1 && currentMiniturn == 0) {
             board[BOARD_SIZE - 1][BOARD_SIZE - 1].canMakeTurn = true;
         }
-
     }
 
     //returns true is can pass turn (it's beginning of player's turn), false otherwise
@@ -273,22 +276,22 @@ public class GameLogic {
                 currentGameState == GameState.DRAW;
     }
 
-    public boolean skipTurn() {
-        if (currentMiniturn != 0 || currentTurn < 2) {
-            return false;
+    public GameLogic skipTurn() {
+        if (isPlayerBlocked || currentMiniturn != 0 || currentTurn < 2) {
+            return null;
         }
-
-        storeEvent(GameEvent.newSkipTurnEvent(events.size()));
+        GameLogic result = new GameLogic(this);
+        result.storeEvent(GameEvent.newSkipTurnEvent(events.size()));
 
         if (previousTurnSkipped) {
-            draw();
-            return true;
+            result.draw();
+            return result;
         }
 
-        previousTurnSkipped = true;
-        currentMiniturn = 2;
-        passTurn();
-        return true;
+        result.previousTurnSkipped = true;
+        result.currentMiniturn = 2;
+        result.passTurn();
+        return result;
     }
 
     private void storeEvent(GameEvent event) {
@@ -303,36 +306,41 @@ public class GameLogic {
         }
     }
 
-    //returns true if turn was correct, false otherwise
-    public boolean doTurn(int x, int y) {
-        if (!board[x][y].canMakeTurn || currentGameState != GameState.RUNNING) {
-            return false;
+    //returns new instance of GameLogic with applied turn if it was correct, null otherwise. Does not modifies current instance
+    public GameLogic doTurn(int x, int y) {
+        if (isPlayerBlocked || !board[x][y].canMakeTurn || currentGameState != GameState.RUNNING) {
+            return null;
         }
-        storeEvent(GameEvent.newTurnEvent(x, y, events.size()));
-        previousTurnSkipped = false;
+        GameLogic result = new GameLogic(this);
+        result.storeEvent(GameEvent.newTurnEvent(x, y, events.size()));
+        result.previousTurnSkipped = false;
 
-        if (board[x][y].cellType != CellType.EMPTY) {
-            board[x][y].setOwnerOnDead(currentPlayerFigure);
+        if (result.board[x][y].cellType != CellType.EMPTY) {
+            result.board[x][y].setOwnerOnDead(currentPlayerFigure);
         } else {
-            board[x][y].setOwner(currentPlayerFigure);
+            result.board[x][y].setOwner(currentPlayerFigure);
         }
 
-        passTurn();
-        return true;
+        result.passTurn();
+        return result;
     }
 
-    public boolean giveUp(PlayerFigure whoGivesUp) {
+    public GameLogic giveUp(PlayerFigure whoGivesUp) {
+        if (isPlayerBlocked) {
+            return null;
+        }
+        GameLogic result = new GameLogic(this);
         switch (whoGivesUp) {
             case CROSS:
-                storeEvent(GameEvent.newGiveUpEvent(PlayerFigure.CROSS, events.size()));
-                zeroWon();
-                return true;
+                result.storeEvent(GameEvent.newGiveUpEvent(PlayerFigure.CROSS, events.size()));
+                result.zeroWon();
+                return result;
             case ZERO:
-                storeEvent(GameEvent.newGiveUpEvent(PlayerFigure.ZERO, events.size()));
-                crossWon();
-                return true;
+                result.storeEvent(GameEvent.newGiveUpEvent(PlayerFigure.ZERO, events.size()));
+                result.crossWon();
+                return result;
             default:
-                return false;
+                return null;
         }
     }
 
@@ -359,7 +367,7 @@ public class GameLogic {
         if (currentMiniturn == 3 ) {
             currentTurn++;
             currentMiniturn = 0;
-            currentPlayerFigure = getOpponent(currentPlayerFigure);
+            currentPlayerFigure = getOpponentPlayerFigure(currentPlayerFigure);
         }
 
         updateGameState();
@@ -379,7 +387,7 @@ public class GameLogic {
     //should be used very carefully, as it might broke some game logic.
     //It's public for easier AI implementations
     public void setCurrentPlayerToOpponent() {
-        currentPlayerFigure = getOpponent(currentPlayerFigure);
+        currentPlayerFigure = getOpponentPlayerFigure(currentPlayerFigure);
         updateGameState();
     }
 
@@ -414,11 +422,15 @@ public class GameLogic {
         return false;
     }
 
+    public GameEvent getLastEvent() {
+        if (events.isEmpty()) {
+            return null;
+        }
+        return events.get(events.size() - 1);
+    }
+
     public List<GameEvent> getLastEventsBy(PlayerFigure figure) {
         List<GameEvent> result = new ArrayList<>();
-        if (currentPlayerFigure == figure) {
-            return result;
-        }
         List<GameEvent> source;
         switch (figure) {
             case CROSS:
@@ -444,6 +456,7 @@ public class GameLogic {
                 break;
             }
         }
+        Collections.reverse(result);
         return result;
     }
 }

@@ -2,12 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:id="@+id/group1">
         <item
-            android:id="@+id/drawer_home"
-            android:title="111" />
+            android:id="@+id/drawer_login"
+            android:title="Login" />
 
         <item
-            android:id="@+id/drawer_favourite"
-            android:title="222" />
+            android:id="@+id/drawer_logout"
+            android:title="Logout" />
 
         <item
             android:id="@+id/drawer_settings"

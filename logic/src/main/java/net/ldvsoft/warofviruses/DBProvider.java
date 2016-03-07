@@ -34,8 +34,8 @@ public interface DBProvider {
     /**
      * Special user ids.
      */
-    int USER_AI_PLAYER = 1;
-    int USER_ANONYMOUS = 0;
+    int USER_AI_PLAYER_ID = 1;
+    int USER_ANONYMOUS_ID = 0;
 
     enum GameStatus {RUNNING, DELETED, FINISHED_DRAW, FINISHED_ZERO_WON, FINISHED_CROSS_WON}
 
@@ -79,6 +79,10 @@ public interface DBProvider {
 
     String ACTIVE_GAME_COUNT = "SELECT COUNT(*) FROM " + GAME_TABLE +
             " WHERE " + GAME_STATUS + " = " + GameStatus.RUNNING.ordinal() + ";";
+
+    String DELETE_GAME_TURNS_BY_ID = "DELETE FROM " + TURN_TABLE + " WHERE " + GAME_ID + " = ?;";
+
+    String DELETE_GAME_BY_ID = "DELETE FROM " + GAME_TABLE + " WHERE " + ID + " = ?;";
 
     //adds game to database and returns its ID
     long addGame(Game game);

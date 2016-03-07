@@ -5,36 +5,45 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.min;
 import static java.lang.Thread.sleep;
-import static net.ldvsoft.warofviruses.GameLogic.ADJACENT_DIRECTIONS;
 import static net.ldvsoft.warofviruses.GameLogic.BOARD_SIZE;
 import static net.ldvsoft.warofviruses.GameLogic.CoordinatePair;
 import static net.ldvsoft.warofviruses.GameLogic.GameState;
 import static net.ldvsoft.warofviruses.GameLogic.PlayerFigure;
-import static net.ldvsoft.warofviruses.GameLogic.isInside;
 
 /**
  * Created by Сева on 20.10.2015.
  */
 public class AIPlayer extends Player {
     public static final User AI_USER = new User(
-            DBProvider.USER_AI_PLAYER,
-            "uniqueGoogleTokenForAiPlayer",
-//            1, //DBOpenHelper.playerClasses[1]
-            "SkyNet", 1,
-            30, 210,
+            DBProvider.USER_AI_PLAYER_ID,
+            WoVPreferences.AI_GOOGLE_TOKEN,
+            WoVPreferences.AI_NICKNAME_STR, WoVPreferences.AI_NICKNAME_ID,
+            WoVPreferences.DEFAULT_CROSS_COLOR, WoVPreferences.DEFAULT_ZERO_COLOR,
             null);
     private AsyncTask<Void, CoordinatePair, Void> runningStrategy;
+
+    static class MoveCostPair {
+        CoordinatePair move;
+        double cost;
+        MoveCostPair(CoordinatePair move, double cost) {
+            this.move = move;
+            this.cost = cost;
+        }
+    }
 
     public AIPlayer(GameLogic.PlayerFigure ownFigure) {
         this.ownFigure = ownFigure;
         this.user = AI_USER;
         this.type = 1;
+        runningStrategy = new BruteforceStrategy();
     }
 
     public static AIPlayer deserialize(User user, GameLogic.PlayerFigure ownFigure, Context context) {
@@ -45,7 +54,7 @@ public class AIPlayer extends Player {
     @Override
     public void makeTurn() {
         Log.d("AIPlayer", "Turn passed to AI player");
-        runningStrategy = new BruteforceStrategy(game);
+        runningStrategy = new BruteforceStrategy();
         runningStrategy.execute();
     }
 
@@ -64,16 +73,15 @@ public class AIPlayer extends Player {
     @Override
     public void setGame(Game game) {
         super.setGame(game);
-        if (!game.isFinished() && game.getCurrentPlayer().equals(this)) {
+        if (!game.isFinished() && game.getCurrentPlayer() == this) {
             makeTurn();
         }
     }
 
     private class BruteforceStrategy extends AsyncTask<Void, CoordinatePair, Void> {
-        private Game game;
-        BruteforceStrategy(Game game) {
-            this.game = game;
-        }
+        final static double DANGER_FACTOR = 1.25, CONTROL_FACTOR = 1.0, TURN_COUNT_FACTOR = 0.05;
+        private static final int GREEDY_TURNS_FOR_ENEMY = 1; //to avoid immediate danger
+        private static final String TAG = "BruteforceStrategy";
 
         //always returns score for ai player.
         private double getEndGameScore(GameLogic game) {
@@ -86,9 +94,9 @@ public class AIPlayer extends Player {
                     return 0;
             }
         }
+
         //always returns score for ai player.
         private double getControlledCellsScore(GameLogic game) {
-            final double DANGER_FACTOR = 1.25, CONTROL_FACTOR = 1.0, TURN_COUNT_FACTOR = 0.05;
 
             if (game.getCurrentGameState() != GameState.RUNNING) {
                 return getEndGameScore(game);
@@ -102,7 +110,7 @@ public class AIPlayer extends Player {
                 currentPlayerChanged = true;
             }
 
-            for (int sign = 1; sign >= -1; sign -= 2) {
+            for (int sign : new int[]{1, -1}) {
 
                 for (int i = 0; i < BOARD_SIZE; i++) {
                     for (int j = 0; j < BOARD_SIZE; j++) {
@@ -110,7 +118,7 @@ public class AIPlayer extends Player {
                             result += sign * CONTROL_FACTOR;
                         }
                         if (game.getCellAt(i, j).canMakeTurn() &&
-                                game.getCellAt(i, j).getOwner() == game.getOpponent(game.getCurrentPlayerFigure())) {
+                                game.getCellAt(i, j).getCellType().getOwner() == GameLogic.getOpponentPlayerFigure(game.getCurrentPlayerFigure())) {
                             result += sign * DANGER_FACTOR;
                         }
                         if (game.getCellAt(i, j).canMakeTurn()) {
@@ -126,102 +134,80 @@ public class AIPlayer extends Player {
             if (currentPlayerChanged) {
                 game.setCurrentPlayerToOpponent();
             }
-           // System.err.println("Total score=" + result);
             return result;
         }
 
         private void runStrategy(GameLogic gameLogic) {
-            ArrayList<CoordinatePair> optMoves = bruteforceMoves(gameLogic);
-            if (isCancelled() || optMoves == null) {
+            List<CoordinatePair> optMoves = bruteforceMoves(gameLogic);
+            if (isCancelled()) {
                 return;
             }
 
             for (CoordinatePair move : optMoves) {
-                publishProgress(move);
-                try {
-                    sleep(750);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                gameLogic = gameLogic.doTurn(move.x, move.y);
             }
+            game.applyPlayerEvents(gameLogic.getLastEventsBy(ownFigure), AIPlayer.this);
         }
 
-        private void orderMovesByCost(ArrayList<CoordinatePair> moves, GameLogic curGameLogic) {
-            class Pair {
-                CoordinatePair move;
-                double cost;
-                Pair(CoordinatePair move, double cost) {
-                    this.move = move;
-                    this.cost = cost;
-                }
-            }
-
-            ArrayList<Pair> movesWithCosts = new ArrayList<>();
+        private List<CoordinatePair> orderMovesByCost(List<CoordinatePair> moves, GameLogic curGameLogic) {
+            List<MoveCostPair> movesWithCosts = new ArrayList<>();
             for (CoordinatePair move : moves) {
-                GameLogic logic = new GameLogic(curGameLogic);
-                logic.doTurn(move.x, move.y);
-                movesWithCosts.add(new Pair(move, getControlledCellsScore(logic)));
+                GameLogic logic = curGameLogic.doTurn(move.x, move.y);
+                movesWithCosts.add(new MoveCostPair(move, getControlledCellsScore(logic)));
             }
 
-            Collections.sort(movesWithCosts, new Comparator<Pair>() {
+            Collections.sort(movesWithCosts, new Comparator<MoveCostPair>() {
                 @Override
-                public int compare(Pair lhs, Pair rhs) {
-                    if (abs(lhs.cost - rhs.cost) < 1e-4) {
-                        return 0;
-                    }
-                    return lhs.cost < rhs.cost ? -1 : 1;
+                public int compare(MoveCostPair lhs, MoveCostPair rhs) {
+                    return Double.compare(lhs.cost, rhs.cost);
                 }
             });
 
-            moves.clear();
-            for (Pair pair : movesWithCosts) {
-                moves.add(pair.move);
+            List<CoordinatePair> result = new ArrayList<>();
+            for (MoveCostPair pair : movesWithCosts) {
+                result.add(pair.move);
             }
+            return result;
         }
 
-        private ArrayList<CoordinatePair> bruteforceMoves(GameLogic gameLogic) {
+        private List<CoordinatePair> bruteforceMoves(GameLogic gameLogic) {
             if (isCancelled()) {
-                return null;
+                return new ArrayList<>();
             }
 
-            ArrayList<CoordinatePair> result = new ArrayList<>();
+            List<CoordinatePair> result = new ArrayList<>();
 
             if (gameLogic.getCurrentPlayerFigure() != ownFigure) {
                 return result;
             }
 
-            ArrayList<CoordinatePair> moves = gameLogic.getMoves();
+            List<CoordinatePair> moves = gameLogic.getMoves();
+
             if (moves.size() == 0) {
                 return result;
             }
 
-            orderMovesByCost(moves, gameLogic);
+            moves = orderMovesByCost(moves, gameLogic);
             Collections.reverse(moves); //take into account only moves that give us highest scores
-            while (moves.size() > 5) {
-                moves.remove(moves.size() - 1);
-            }
+            int newMovesSize = min(moves.size(), 5);
+            moves = Arrays.asList(Arrays.copyOf(moves.toArray(new CoordinatePair[newMovesSize]), newMovesSize));
 
             double optScore = -10000;
 
             for (CoordinatePair move: moves) {
-                GameLogic tmpGameLogic = new GameLogic(gameLogic);
-                tmpGameLogic.doTurn(move.x, move.y);
-                ArrayList<CoordinatePair> optMoves = bruteforceMoves(tmpGameLogic);
-
-                if (optMoves == null) {
-                    return null;
-                }
+                GameLogic tmpGameLogic = gameLogic.doTurn(move.x, move.y);
+                List<CoordinatePair> optMoves = bruteforceMoves(tmpGameLogic);
 
                 for (CoordinatePair optMove : optMoves) {
-                    tmpGameLogic.doTurn(optMove.x, optMove.y);
+                    tmpGameLogic = tmpGameLogic.doTurn(optMove.x, optMove.y);
                 }
-                for (int i = 0; i < 1; i++) { //to check for immediate danger
+                for (int i = 0; i < GREEDY_TURNS_FOR_ENEMY; i++) {
                     ArrayList<CoordinatePair> enemyMoves = tmpGameLogic.getMoves();
                     orderMovesByCost(enemyMoves, tmpGameLogic);
                     if (enemyMoves.size() == 0) {
                         break;
                     }
-                    tmpGameLogic.doTurn(enemyMoves.get(0).x, enemyMoves.get(0).y); //greedy minimize AI score
+                    tmpGameLogic = tmpGameLogic.doTurn(enemyMoves.get(0).x, enemyMoves.get(0).y); //greedy minimize AI score
                 }
 
                 double newScore = getControlledCellsScore(tmpGameLogic);
@@ -237,28 +223,9 @@ public class AIPlayer extends Player {
         @Override
         protected Void doInBackground(Void... params) {
             Log.d("AIPlayer", "AIPlayer::run");
-            GameLogic gameLogic = game.getGameLogic();
-            if (!gameLogic.canMove()) {
-                publishProgress(new CoordinatePair(-1, -1));
-            }
-            runStrategy(gameLogic);
+            runStrategy(game.getGameLogic());
             Log.d("AIPlayer", "Turn finished");
             return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(CoordinatePair... cells) {
-            if (isCancelled()) {
-                return;
-            }
-
-            Log.d("AIPlayer", "Update progress: do move to " + cells[0].x + " " + cells[0].y);
-            if (cells[0].x < 0) {
-                game.skipTurn(AIPlayer.this);
-            } else {
-                game.doTurn(AIPlayer.this, cells[0].x, cells[0].y);
-            }
-
         }
     }
 }

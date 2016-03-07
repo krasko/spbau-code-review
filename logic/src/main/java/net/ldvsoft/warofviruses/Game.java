@@ -1,6 +1,8 @@
 package net.ldvsoft.warofviruses;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Сева on 19.10.2015.
@@ -13,6 +15,8 @@ public class Game {
     private GameLogic gameLogic;
     private int zeroType;
     private int crossType;
+
+    private List<GameEvent> unconfirmedEvents = new ArrayList<>();
 
     public int getCrossType() {
         return crossType;
@@ -29,6 +33,7 @@ public class Game {
     public interface OnGameFinishedListener {
         void onGameFinished();
     }
+
     public static Game deserializeGame(long id, Player crossPlayer, int crossType, Player zeroPlayer, int zeroType, GameLogic gameLogic) {
         Game game = new Game();
         game.id = id;
@@ -79,9 +84,27 @@ public class Game {
         return gameLogic.getEventHistory().size();
     }
 
-    //returns COPY of gameLogic instance to prevent corrupting it
     public GameLogic getGameLogic() {
-        return new GameLogic(gameLogic);
+        return gameLogic;
+    }
+
+    public GameLogic getUnconfirmedGameLogic() {
+        GameLogic result = gameLogic;
+        for (GameEvent event : unconfirmedEvents) {
+            result = event.applyEvent(result);
+        }
+
+        if (result == null) {
+            return null;
+        }
+
+        GameLogic.PlayerFigure newFigure = result.getCurrentPlayerFigure();
+        if (newFigure != gameLogic.getCurrentPlayerFigure()) {
+            //result.setCurrentPlayerToOpponent(); //to not draw possible moves for an opponent
+            result.blockCurrentPlayer();
+        }
+
+        return result;
     }
 
     public void startNewGame(Player cross, Player zero) {
@@ -91,7 +114,6 @@ public class Game {
         crossType = cross.type;
         zeroType = zero.type;
         gameLogic = new GameLogic();
-        gameLogic.newGame();
         crossPlayer.setGame(this);
         zeroPlayer.setGame(this);
     }
@@ -119,33 +141,33 @@ public class Game {
     }
 
     public boolean giveUp(Player sender) {
-        /*if (!sender.equals(getCurrentPlayer())) {
-            return false; //it's ok to give up for opponent
-        }*/
-        boolean result = gameLogic.giveUp(sender.ownFigure);
-        if (result) {
-            crossPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
-            zeroPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
-        }
-        return result;
-    }
-
-    public boolean skipTurn(Player sender) {
-        if (!sender.equals(getCurrentPlayer())) {
+        if (isWaitingForConfirm()) {
             return false;
         }
 
-        GameLogic.PlayerFigure oldPlayer = gameLogic.getCurrentPlayerFigure();
-        boolean result = gameLogic.skipTurn();
-        if (result) {
-            GameLogic.PlayerFigure currentPlayer = gameLogic.getCurrentPlayerFigure();
-            if (!oldPlayer.equals(currentPlayer)) {
-                notifyPlayer();
-            }
-            crossPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
-            zeroPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
+        GameLogic result = getUnconfirmedGameLogic().giveUp(sender.ownFigure);
+        if (result != null) {
+            unconfirmedEvents.add(result.getLastEvent());
+            return confirm(sender);
         }
-        return result;
+        return false;
+    }
+
+    public boolean isWaitingForConfirm() {
+        return getUnconfirmedGameLogic().getCurrentPlayerFigure() != gameLogic.getCurrentPlayerFigure();
+    }
+
+    public boolean skipTurn(Player sender) {
+        if (!sender.equals(getCurrentPlayer()) || isWaitingForConfirm()) {
+            return false;
+        }
+
+        GameLogic result = getUnconfirmedGameLogic().skipTurn();
+        if (result != null) {
+            unconfirmedEvents.add(result.getLastEvent());
+            return confirm(sender);
+        }
+        return false;
     }
 
     public void update() {
@@ -153,24 +175,61 @@ public class Game {
         zeroPlayer.setGame(this);
     }
     public boolean doTurn(Player sender, int x, int y) {
+        if (!sender.equals(getCurrentPlayer()) || isWaitingForConfirm()) {
+            return false;
+        }
+
+        GameLogic result = getUnconfirmedGameLogic().doTurn(x, y);
+        if (result != null) {
+            unconfirmedEvents.add(result.getLastEvent());
+        }
+
+        return result != null;
+    }
+
+    public boolean cancelTurn(Player sender) {
+        if (unconfirmedEvents.isEmpty()) {
+            return false;
+        }
+        unconfirmedEvents.remove(unconfirmedEvents.size() - 1);
+        return true;
+    }
+
+    private void gameStateChanged(GameEvent event, Player sender) {
+        if (sender.equals(zeroPlayer)) {
+            crossPlayer.onGameStateChanged(event, sender);
+        } else {
+            zeroPlayer.onGameStateChanged(event, sender);
+        }
+
+    }
+
+    public boolean confirm(Player sender) {
         if (!sender.equals(getCurrentPlayer())) {
             return false;
         }
 
-        GameLogic.PlayerFigure oldPlayer = gameLogic.getCurrentPlayerFigure();
-        boolean result = gameLogic.doTurn(x, y);
-        if (result) {
-            GameLogic.PlayerFigure currentPlayer = gameLogic.getCurrentPlayerFigure();
-            if (!oldPlayer.equals(currentPlayer)) {
-                notifyPlayer();
-            }
-            crossPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
-            zeroPlayer.onGameStateChanged(gameLogic.getEventHistory().get(gameLogic.getEventHistory().size() - 1), sender);
+        GameLogic.PlayerFigure oldPlayerFigure = gameLogic.getCurrentPlayerFigure();
+
+        if (!getUnconfirmedGameLogic().isBlocked()) {
+            return false;
         }
-        return result;
+
+        List<GameEvent> lastEvents = new ArrayList<>(unconfirmedEvents);
+        unconfirmedEvents.clear();
+        for (GameEvent event: lastEvents) {
+            gameStateChanged(event, sender);
+            gameLogic = event.applyEvent(gameLogic);
+        }
+
+        if (oldPlayerFigure != gameLogic.getCurrentPlayerFigure()) {
+            notifyPlayer();
+        }
+
+        return true;
     }
 
-    public GameLogic.PlayerFigure getMineFigure(long userId) {
+    public GameLogic.PlayerFigure getMyFigure(long userId) {
         if (crossPlayer.getUser().getId() == zeroPlayer.getUser().getId()) {
             //Just a local game
             return GameLogic.PlayerFigure.NONE;
@@ -181,5 +240,39 @@ public class Game {
             return GameLogic.PlayerFigure.ZERO;
         }
 
+    }
+
+    public boolean applyPlayerEvents(List<GameEvent> events, Player sender) {
+        if (sender != getCurrentPlayer()) {
+            return false;
+        }
+
+        GameLogic result = gameLogic;
+        GameLogic.PlayerFigure oldPlayerFigure = gameLogic.getCurrentPlayerFigure();
+        unconfirmedEvents.clear();
+        for (GameEvent event : events) {
+            result = event.applyEvent(result);
+            unconfirmedEvents.add(event);
+            if (result == null) {
+                unconfirmedEvents.clear();
+                return false;
+            }
+            gameStateChanged(event, sender);
+            try {
+                Thread.sleep(750);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (oldPlayerFigure != result.getCurrentPlayerFigure()) {
+            gameLogic = result;
+            unconfirmedEvents.clear();
+            notifyPlayer();
+            return true;
+        }
+
+        unconfirmedEvents.clear();
+        return false;
     }
 }

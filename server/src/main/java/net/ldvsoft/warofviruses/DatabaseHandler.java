@@ -181,10 +181,10 @@ public class DatabaseHandler implements DBProvider {
             return new User(
                     users.getLong(1),
                     users.getString(2),
-                    users.getString(4),
+                    users.getString(3),
+                    users.getInt(4),
                     users.getInt(5),
                     users.getInt(6),
-                    users.getInt(7),
                     null /*FIXME Load separetly*/
             );
         } catch (SQLException e) {

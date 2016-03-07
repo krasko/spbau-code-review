@@ -7,7 +7,7 @@
         android:radius="@dimen/spacing_xsmall" />
 
     <solid
-        android:color="@color/primary_trans" />
+        android:color="@color/primary_light" />
 
     <stroke
         android:width="2dip"

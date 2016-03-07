@@ -13,24 +13,19 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 import static net.ldvsoft.warofviruses.GameLogic.BOARD_SIZE;
 import static net.ldvsoft.warofviruses.GameLogic.PlayerFigure.CROSS;
-import static net.ldvsoft.warofviruses.GameLogic.PlayerFigure.NONE;
 import static net.ldvsoft.warofviruses.GameLogic.PlayerFigure.ZERO;
 
 public class GameActivity extends GameActivityBase {
@@ -38,8 +33,10 @@ public class GameActivity extends GameActivityBase {
 
     private TextView crossNick;
     private TextView zeroNick;
-    private TextView gameStatus1;
-    private TextView gameStatus2;
+    private Button giveUpButton;
+    private Button cancelTurnButton;
+    private Button confirmTurnButton;
+    private Button skipTurnButton;
 
     private BroadcastReceiver tokenSentReceiver;
     private BroadcastReceiver gameLoadedFromServerReceiver;
@@ -76,6 +73,7 @@ public class GameActivity extends GameActivityBase {
 
         @Override
         public void onClick(DialogInterface dialog, int which) {
+            lastSavedGameID = DO_NOT_SAVE_GAME;
             if (giveUp) {
                 game.giveUp(humanPlayer);
             }
@@ -93,65 +91,26 @@ public class GameActivity extends GameActivityBase {
         if (game == null) {
             return;
         }
-        super.redrawGame(game.getGameLogic(), humanPlayer.ownFigure);
+        figureSet.setHueZero(game.getZeroPlayer().getUser().getColorZero());
+        figureSet.setHueCross(game.getCrossPlayer().getUser().getColorCross());
 
+        GameLogic displayState = game.getUnconfirmedGameLogic();
+        boolean canMakeTurn = !game.isFinished() && game.getCurrentPlayer().equals(humanPlayer);
+        super.redrawGame(displayState);
         crossNick.setText(game.getCrossPlayer().getName());
         zeroNick .setText(game.getZeroPlayer().getName());
-
-        GameLogic.PlayerFigure mineFigure = game.getMineFigure(humanPlayer.getUser().getId());
-        GameLogic.GameState gameState = game.getGameState();
-        switch (gameState) {
-            case RUNNING:
-                GameLogic.PlayerFigure currentFigure = game.getCurrentPlayer().ownFigure;
-                if (mineFigure == NONE) {
-                    switch (currentFigure) {
-                        case CROSS:
-                            gameStatus1.setText(getString(R.string.GAME_CROSS_TURN));
-                            break;
-                        case ZERO:
-                            gameStatus1.setText(getString(R.string.GAME_ZERO_TURN));
-                            break;
-                    }
-                } else if (currentFigure == mineFigure) {
-                    gameStatus1.setText(getString(R.string.GAME_USER_TURN));
-                } else {
-                    gameStatus1.setText(getString(R.string.GAME_OPPONENT_TURN));
-                }
-                int miniturnsLeft = 3 - game.getGameLogic().getCurrentMiniturn();
-                gameStatus2.setText(String.format(getString(R.string.GAME_MINITURNS_LEFT), miniturnsLeft));
-                break;
-            case DRAW:
-                gameStatus1.setText(getString(R.string.GAME_DRAW));
-                gameStatus2.setText(getString(R.string.GAME_OVER));
-                break;
-            case CROSS_WON:
-                if (mineFigure == NONE) {
-                    gameStatus1.setText(getString(R.string.GAME_CROSS_WON));
-                } else if (mineFigure == CROSS) {
-                    gameStatus1.setText(getString(R.string.GAME_WON));
-                } else {
-                    gameStatus1.setText(getString(R.string.GAME_LOST));
-                }
-                gameStatus2.setText(getString(R.string.GAME_OVER));
-                break;
-            case ZERO_WON:
-                if (mineFigure == NONE) {
-                    gameStatus1.setText(getString(R.string.GAME_ZERO_WON));
-                } else if (mineFigure == ZERO) {
-                    gameStatus1.setText(getString(R.string.GAME_WON));
-                } else {
-                    gameStatus1.setText(getString(R.string.GAME_LOST));
-                }
-                gameStatus2.setText(getString(R.string.GAME_OVER));
-                break;
-        }
+        giveUpButton.setEnabled(!game.isFinished());
+        skipTurnButton.setEnabled(!game.isFinished() && canMakeTurn && game.getUnconfirmedGameLogic() == game.getGameLogic());
+        cancelTurnButton.setEnabled(game.getUnconfirmedGameLogic() != game.getGameLogic());
+        confirmTurnButton.setEnabled(game.isWaitingForConfirm());
     }
 
     @Override
     public void onBackPressed() {
         if (game == null || game.isFinished()) {
-            saveCurrentGame();
             lastSavedGameID = DO_NOT_SAVE_GAME;
+            saveCurrentGame();
+            game = null;
             super.onBackPressed();
             return;
         }
@@ -181,8 +140,10 @@ public class GameActivity extends GameActivityBase {
 
         crossNick   = (TextView) findViewById(R.id.game_cross_nick);
         zeroNick    = (TextView) findViewById(R.id.game_zero_nick);
-        gameStatus1 = (TextView) findViewById(R.id.game_text_game_status_1);
-        gameStatus2 = (TextView) findViewById(R.id.game_text_game_status_2);
+        giveUpButton      = (Button) findViewById(R.id.game_button_giveup);
+        cancelTurnButton  = (Button) findViewById(R.id.game_button_cancelturn);
+        confirmTurnButton = (Button) findViewById(R.id.game_button_confirm);
+        skipTurnButton    = (Button) findViewById(R.id.game_button_skipturn);
 
         game = new Game();
         tokenSentReceiver = new BroadcastReceiver() {
@@ -199,7 +160,7 @@ public class GameActivity extends GameActivityBase {
         };
 
         Intent intent = getIntent();
-        setCurrentGameListeners();
+
         switch (intent.getIntExtra(WoVPreferences.OPPONENT_TYPE, -1)) {
             case WoVPreferences.OPPONENT_RESTORED_GAME:
                 game = null; //will be loaded during onStart()
@@ -208,7 +169,8 @@ public class GameActivity extends GameActivityBase {
                 game.startNewGame(humanPlayer, new AIPlayer(ZERO));
                 break;
             case WoVPreferences.OPPONENT_LOCAL_PLAYER:
-                game.startNewGame(humanPlayer, new HumanPlayer(humanPlayer.getUser(), ZERO));
+                //game.startNewGame(humanPlayer, new HumanPlayer(humanPlayer.getUser(), ZERO));
+                game.startNewGame(humanPlayer, humanPlayer); //this is kind of hack since both players play for CROSS, but actually it doesn't matter
                 break;
             case WoVPreferences.OPPONENT_NETWORK_PLAYER:
                 loadGameFromJson(intent.getStringExtra(WoVPreferences.GAME_JSON_DATA));
@@ -216,10 +178,7 @@ public class GameActivity extends GameActivityBase {
             default:
                 Log.wtf("GameActivityBase", "Could not start new game: incorrect opponent type");
         }
-        initButtons();
-        if (game != null) {
-            redrawGame(game);
-        }
+        initActivityStateAndListeners();
     }
 
     @Override
@@ -238,18 +197,8 @@ public class GameActivity extends GameActivityBase {
     }
 
     private class OnSkipTurnListener implements View.OnClickListener {
-        @Override
         public void onClick(View v) {
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    if (!game.skipTurn(humanPlayer)) {
-                        return null;
-                    }
-                    return null;
-                }
-            }.execute();
-
+            game.skipTurn(humanPlayer);
         }
     }
 
@@ -257,17 +206,19 @@ public class GameActivity extends GameActivityBase {
 
         @Override
         public void onClick(View v) {
-            new AsyncTask<Void, Void, Void>() {
-
-                @Override
-                protected Void doInBackground(Void... params) {
-                    game.giveUp(humanPlayer);
-                    return null;
-                }
-            }.execute();
+            game.giveUp(humanPlayer);
+            redrawGame(game);
         }
     }
 
+    private class OnCancelTurnListener implements  View.OnClickListener {
+
+        @Override
+        public void onClick(View v) {
+            game.cancelTurn(humanPlayer);
+            redrawGame(game);
+        }
+    }
     private class OnBoardClickListener implements View.OnClickListener {
         private final int x, y;
 
@@ -275,37 +226,52 @@ public class GameActivity extends GameActivityBase {
             this.x = x;
             this.y = y;
         }
+
         @Override
         public void onClick(View v) {
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    game.doTurn(humanPlayer, x, y);
-                    return null;
-                }
-            }.execute();
+            game.doTurn(humanPlayer, x, y);
+            redrawGame(game);
         }
     }
 
-    private void initButtons() {
-        Button skipTurnButton = (Button) findViewById(R.id.game_button_passturn);
-        skipTurnButton.setOnClickListener(new OnSkipTurnListener());
-        Button giveUpButton = (Button) findViewById(R.id.game_button_giveup);
-        giveUpButton.setOnClickListener(new OnGiveUpListener());
-        if (game != null) {
-            BoardCellButton.loadDrawables(this, game.getCrossPlayer().getUser().getColorCross(),
-                    game.getZeroPlayer().getUser().getColorZero());
+    private class OnConfirmListener implements  View.OnClickListener {
+
+        @Override
+        public void onClick(View v) {
+            game.confirm(humanPlayer);
+            redrawGame(game);
         }
+    }
+
+    //must be called AFTER creating/loading game to init everything properly
+    private void initActivityStateAndListeners() {
+        if (game == null) {
+            return;
+        }
+
+        skipTurnButton.setOnClickListener(new OnSkipTurnListener());
+        giveUpButton.setOnClickListener(new OnGiveUpListener());
+        confirmTurnButton.setOnClickListener(new OnConfirmListener());
+        cancelTurnButton.setOnClickListener(new OnCancelTurnListener());
+
         for (int i = 0; i != BOARD_SIZE; i++)
             for (int j = 0; j != BOARD_SIZE; j++) {
                 boardButtons[i][j].setOnClickListener(new OnBoardClickListener(i, j));
             }
+
+        if (game.getCrossPlayer() instanceof HumanPlayer) {
+            ((HumanPlayer) game.getCrossPlayer()).setOnGameStateChangedListener(ON_GAME_STATE_CHANGED_LISTENER);
+        }
+        if (game.getZeroPlayer() instanceof HumanPlayer) {
+            ((HumanPlayer) game.getZeroPlayer()).setOnGameStateChangedListener(ON_GAME_STATE_CHANGED_LISTENER);
+        }
+
+        redrawGame(game);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        //lastSavedGameID = DO_NOT_SAVE_GAME;
     }
 
     protected void onResume() {
@@ -319,20 +285,10 @@ public class GameActivity extends GameActivityBase {
                 .registerReceiver(tokenSentReceiver, new IntentFilter(WoVPreferences.GCM_REGISTRATION_COMPLETE));
     }
 
-    private void setCurrentGameListeners() {
-        game.setOnGameFinishedListener(new Game.OnGameFinishedListener() {
-            @Override
-            public void onGameFinished() {
-                saveCurrentGame();
-            }
-        });
-    }
-
     private void saveCurrentGame() {
         new AsyncTask<Game, Void, Void> (){
             @Override
             protected Void doInBackground(Game... params) {
-                //if (lastSavedGameID != DO_NOT_SAVE_GAME) {
                 for (Game game : params) { //actually, there is only one game
                     long id = DBOpenHelper.getInstance(GameActivity.this).addGame(game);
                     if (lastSavedGameID != DO_NOT_SAVE_GAME) {
@@ -351,8 +307,9 @@ public class GameActivity extends GameActivityBase {
             Game loadedGame = DBOpenHelper.getInstance(GameActivity.this).getAndRemoveActiveGame();
             if (loadedGame == null) {
                 loadedGame = DBOpenHelper.getInstance(GameActivity.this).getGameById(lastSavedGameID);
-                lastSavedGameID = NO_GAME_SAVED;
+                DBOpenHelper.getInstance(GameActivity.this).deleteGameById(lastSavedGameID);
             }
+            lastSavedGameID = NO_GAME_SAVED;
             if (loadedGame == null) {
                 Log.d("GameActivity", "FAIL: Null game loaded");
             } else {
@@ -361,12 +318,8 @@ public class GameActivity extends GameActivityBase {
                     game.onStop();
                 }
                 game = loadedGame;
-                if (game.getCrossPlayer() instanceof HumanPlayer) {
-                    ((HumanPlayer) game.getCrossPlayer()).setOnGameStateChangedListener(ON_GAME_STATE_CHANGED_LISTENER);
-                } else if (game.getZeroPlayer() instanceof HumanPlayer) {
-                    ((HumanPlayer) game.getZeroPlayer()).setOnGameStateChangedListener(ON_GAME_STATE_CHANGED_LISTENER);
-                } //it's a dirty hack, don't know how to do better
             }
+            game.updateGameInfo();
             return null;
         }
 
@@ -413,7 +366,7 @@ public class GameActivity extends GameActivityBase {
                 throw new IllegalArgumentException("Illegal myFigure value!");
         }
 
-        List<GameEvent> events = (WoVProtocol.getEventsFromIntArray(gson.fromJson(jsonData.get(WoVProtocol.TURN_ARRAY), int[].class)));
+        List<GameEvent> events = WoVProtocol.eventsFromJson(jsonData);
 
         humanPlayer.setOnGameStateChangedListener(ON_GAME_STATE_CHANGED_LISTENER);
         int crossType = myFigure == CROSS ? 0 : 2;
@@ -423,8 +376,7 @@ public class GameActivity extends GameActivityBase {
         }
         game = Game.deserializeGame(gson.fromJson(jsonData.get(WoVProtocol.GAME_ID), int.class),
                 playerCross, crossType, playerZero, zeroType, GameLogic.deserialize(events));
-        initButtons();
-        redrawGame(game);
+        initActivityStateAndListeners();
     }
 
     @Override
@@ -434,53 +386,6 @@ public class GameActivity extends GameActivityBase {
 
     private void onGameLoaded(Game game) {
         this.game = game;
-        game.updateGameInfo();
-        setCurrentGameListeners();
-        initButtons();
-        redrawGame(game);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        if (id == R.id.test2) {
-            new AsyncTask<Void, Void, String>() {
-                @Override
-                protected String doInBackground(Void... params) {
-                    String msg;
-                    try {
-                        GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(GameActivity.this);
-
-                        Bundle data = new Bundle();
-                        data.putString(WoVProtocol.ACTION, WoVProtocol.ACTION_PING);
-                        String id = UUID.randomUUID().toString();
-                        gcm.send(getString(R.string.gcm_defaultSenderId) + "@gcm.googleapis.com", id, data);
-                        msg = "Sent message";
-                    } catch (IOException ex) {
-                        msg = "Error :" + ex.getMessage();
-                    }
-                    return msg;
-                }
-
-                @Override
-                protected void onPostExecute(String msg) {
-                    if (msg == null)
-                        return;
-                    Toast.makeText(GameActivity.this, msg, Toast.LENGTH_SHORT).show();
-                }
-            }.execute(null, null, null);
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        initActivityStateAndListeners();
     }
 }

@@ -32,8 +32,8 @@
     <orderEntry type="library" exported="" name="smack-tcp-4.1.4" level="project" />
     <orderEntry type="library" exported="" name="smack-im-4.1.4" level="project" />
     <orderEntry type="library" exported="" name="smack-debug-4.1.4" level="project" />
-    <orderEntry type="library" exported="" name="gson-2.5" level="project" />
     <orderEntry type="library" exported="" name="mysql-connector-java-5.1.38" level="project" />
+    <orderEntry type="library" exported="" name="gson-2.6.1" level="project" />
     <orderEntry type="library" exported="" name="smack-core-4.1.4" level="project" />
     <orderEntry type="library" exported="" name="smack-resolver-javax-4.1.4" level="project" />
     <orderEntry type="library" exported="" name="smack-sasl-javax-4.1.4" level="project" />

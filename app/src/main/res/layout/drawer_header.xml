@@ -33,6 +33,6 @@
         android:id="@+id/username"
         android:text="New Text"
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        android:textColor="@color/primary_light" />
+        android:textColor="@color/primary_text" />
 
 </RelativeLayout>

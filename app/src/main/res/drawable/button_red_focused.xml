@@ -10,6 +10,6 @@
         android:color="#00ffffff" />
 
     <stroke
-        android:width="1dip"
-        android:color="@color/gray"/>
+        android:width="2dip"
+        android:color="@color/red"/>
 </shape>

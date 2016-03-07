@@ -11,7 +11,8 @@
         "client_id": "android:ru.spbau.lapshin.warofviruses",
         "client_type": 1,
         "android_client_info": {
-          "package_name": "ru.spbau.lapshin.warofviruses"
+          "package_name": "ru.spbau.lapshin.warofviruses",
+          "certificate_hash": []
         }
       },
       "oauth_client": [],
@@ -42,19 +43,11 @@
         "client_id": "android:net.ldvsoft.warofviruses",
         "client_type": 1,
         "android_client_info": {
-          "package_name": "net.ldvsoft.warofviruses"
+          "package_name": "net.ldvsoft.warofviruses",
+          "certificate_hash": []
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "555379223441-39ngvlrggoqcapplpgqgkldhes5ntjg0.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "net.ldvsoft.warofviruses",
-            "certificate_hash": "447214B9DF6574A2549B930640A03EA4DE9303C4"
-          }
-        }
-      ],
+      "oauth_client": [],
       "api_key": [],
       "services": {
         "analytics_service": {
@@ -69,7 +62,7 @@
           "other_platform_oauth_client": []
         },
         "google_signin_service": {
-          "status": 2
+          "status": 1
         },
         "ads_service": {
           "status": 1

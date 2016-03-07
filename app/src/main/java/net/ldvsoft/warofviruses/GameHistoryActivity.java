@@ -1,35 +1,27 @@
 package net.ldvsoft.warofviruses;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.format.DateFormat;
-import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import net.ldvsoft.warofviruses.GameLogic.GameState;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
-import static net.ldvsoft.warofviruses.GameLogic.GameState.*;
+import static net.ldvsoft.warofviruses.GameLogic.CellType;
+import static net.ldvsoft.warofviruses.GameLogic.PlayerFigure;
 
 /**
  * Activity which displays all the played finished games that stored locally.
@@ -37,6 +29,7 @@ import static net.ldvsoft.warofviruses.GameLogic.GameState.*;
  */
 public class GameHistoryActivity extends AppCompatActivity {
     private MyAdapter adapter;
+    private FigureSet figureSet = new FigureSet();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +41,8 @@ public class GameHistoryActivity extends AppCompatActivity {
         ActionBar actionBar = getSupportActionBar();
 
         if (actionBar != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
         }
 
         RecyclerView recycler = (RecyclerView) findViewById(R.id.games);
@@ -59,6 +52,11 @@ public class GameHistoryActivity extends AppCompatActivity {
         recycler.setAdapter(adapter);
 
         adapter.notifyDataSetChanged();
+
+        /*FIXME*/
+        for (PlayerFigure figure : PlayerFigure.values()) {
+            figureSet.setFigureSource(figure, DefaultFigureSource.NAME);
+        }
     }
 
     private class GameHistoryLoader extends AsyncTask<Void, Void, Void> {
@@ -116,19 +114,19 @@ public class GameHistoryActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             final Game game = data.get(position);
-            switch (game.getMineFigure(userId)) {
+            switch (game.getMyFigure(userId)) {
                 case NONE:
-                    holder.opponent.setText(getString(R.string.GAME_LOCAL));
-                    holder.figure.setImageDrawable(BoardCellButton.cellEmpty);
+                    holder.opponent.setText(getString(R.string.game_status_local));
+                    holder.figure.setFigure(figureSet, BoardCellState.get(CellType.EMPTY));
                     switch (game.getGameState()) {
                         case CROSS_WON:
-                            holder.result.setText(getString(R.string.GAME_CROSS_WON));
+                            holder.result.setText(getString(R.string.game_status_cross_won));
                             break;
                         case ZERO_WON:
-                            holder.result.setText(getString(R.string.GAME_ZERO_WON));
+                            holder.result.setText(getString(R.string.game_status_zero_won));
                             break;
                         case DRAW:
-                            holder.result.setText(getString(R.string.GAME_DRAW));
+                            holder.result.setText(getString(R.string.game_status_draw));
                             break;
                     }
                     break;
@@ -136,32 +134,32 @@ public class GameHistoryActivity extends AppCompatActivity {
                     holder.opponent.setText(game.getZeroPlayer().getName());
                     switch (game.getGameState()) {
                         case CROSS_WON:
-                            holder.figure.setImageDrawable(BoardCellButton.cellCross);
-                            holder.result.setText(getString(R.string.GAME_WON));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.CROSS));
+                            holder.result.setText(getString(R.string.game_status_won));
                             break;
                         case ZERO_WON:
-                            holder.figure.setImageDrawable(BoardCellButton.cellCrossDead);
-                            holder.result.setText(getString(R.string.GAME_LOST));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.DEAD_CROSS));
+                            holder.result.setText(getString(R.string.game_status_lost));
                             break;
                         case DRAW:
-                            holder.figure.setImageDrawable(BoardCellButton.cellEmpty);
-                            holder.result.setText(getString(R.string.GAME_DRAW));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.EMPTY));
+                            holder.result.setText(getString(R.string.game_status_draw));
                     }
                     break;
                 case ZERO:
                     holder.opponent.setText(game.getCrossPlayer().getName());
                     switch (game.getGameState()) {
                         case CROSS_WON:
-                            holder.figure.setImageDrawable(BoardCellButton.cellZeroDead);
-                            holder.result.setText(getString(R.string.GAME_LOST));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.DEAD_ZERO));
+                            holder.result.setText(getString(R.string.game_status_lost));
                             break;
                         case ZERO_WON:
-                            holder.figure.setImageDrawable(BoardCellButton.cellZero);
-                            holder.result.setText(getString(R.string.GAME_WON));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.ZERO));
+                            holder.result.setText(getString(R.string.game_status_won));
                             break;
                         case DRAW:
-                            holder.figure.setImageDrawable(BoardCellButton.cellEmpty);
-                            holder.result.setText(getString(R.string.GAME_DRAW));
+                            holder.figure.setFigure(figureSet, BoardCellState.get(CellType.EMPTY));
+                            holder.result.setText(getString(R.string.game_status_draw));
                     }
                     break;
             }

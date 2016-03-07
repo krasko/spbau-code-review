@@ -1,26 +1,23 @@
 <resources>
     <string name="app_name">War Of Viruses</string>
 
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="server_cgi">https://ldvsoft.net/cgi/war-of-viruses</string>
 
-    <string name="give_up">Give Up</string>
-    <string name="skip_turn">Skip Turn</string>
-    <string name="first_turn"><![CDATA[<<]]></string>
-    <string name="prev_turn"><![CDATA[<]]></string>
-    <string name="next_turn"><![CDATA[>]]></string>
-    <string name="last_turn"><![CDATA[>>]]></string>
-    <string name="GAME_LOST">Lost</string>
-    <string name="GAME_WON">Won</string>
-    <string name="GAME_LOCAL">Local game</string>
-    <string name="GAME_DRAW">Draw</string>
-    <string name="GAME_ZERO_WON">Zeroes won</string>
-    <string name="GAME_CROSS_WON">Crosses won</string>
-    <string name="GAME_OVER">Game over</string>
-    <string name="GAME_MINITURNS_LEFT">%d moves left</string>
-    <string name="GAME_CROSS_TURN">Crosses\' turn</string>
-    <string name="GAME_ZERO_TURN">Zeroes\' turn</string>
-    <string name="GAME_USER_TURN">Your turn</string>
-    <string name="GAME_OPPONENT_TURN">Opponent\'s turn</string>
+    <string name="game_give_up">Give Up</string>
+    <string name="game_skip_turn">Skip Turn</string>
+    <string name="game_replay_first_turn"><![CDATA[<<]]></string>
+    <string name="game_replay_prev_turn"><![CDATA[<]]></string>
+    <string name="game_replay_next_turn"><![CDATA[>]]></string>
+    <string name="game_replay_last_turn"><![CDATA[>>]]></string>
+    <string name="game_status_local">Local game</string>
+    <string name="game_status_lost">Lost</string>
+    <string name="game_status_won">Won</string>
+    <string name="game_status_draw">Draw</string>
+    <string name="game_status_zero_won">Zeroes won</string>
+    <string name="game_status_cross_won">Crosses won</string>
+    <string name="game_status_cross_gave_up">Crosses gave up</string>
+    <string name="game_status_zero_gave_up">Zeroes gave up</string>
+    <string name="game_confirm_turn">Confirm turn</string>
+    <string name="game_cancel_turn">Cancel turn</string>
 </resources>

@@ -94,6 +94,39 @@
 
     <LinearLayout
         android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text=""
+            android:id="@+id/game_note_cross"
+            android:layout_gravity="center"
+            android:textColor="@color/primary_text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text=" "
+            android:id="@+id/game_note_space"
+            android:textColor="@color/primary_text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text=""
+            android:id="@+id/game_note_zero"
+            android:layout_gravity="center"
+            android:textColor="@color/primary_text" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:id="@+id/game_bar_play">
@@ -101,59 +134,40 @@
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/give_up"
+            android:text="@string/game_give_up"
             android:id="@+id/game_button_giveup"
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button.Red" />
 
-        <LinearLayout
+        <Button
+            style="@style/AppTheme.Button.Yellow"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1.7"
-            android:orientation="vertical">
+            android:text="@string/game_cancel_turn"
+            android:id="@+id/game_button_cancelturn"
+            android:layout_weight="1"
+            android:layout_margin="@dimen/spacing_small" />
 
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="UNKNOWN"
-                    android:id="@+id/game_text_game_status_1"
-                    android:layout_gravity="center"
-                    android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:textColor="@color/primary_text" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="UNKNOWN"
-                    android:id="@+id/game_text_game_status_2"
-                    android:layout_gravity="center"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="@color/secondary_text" />
-            </FrameLayout>
-        </LinearLayout>
+        <Button
+            style="@style/AppTheme.Button.Green"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:text="@string/game_confirm_turn"
+            android:id="@+id/game_button_confirm"
+            android:layout_margin="@dimen/spacing_small"
+            android:layout_weight="1" />
 
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/skip_turn"
-            android:id="@+id/game_button_passturn"
+            android:text="@string/game_skip_turn"
+            android:id="@+id/game_button_skipturn"
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button.Red" />
     </LinearLayout>
 
     <LinearLayout
@@ -165,66 +179,64 @@
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/first_turn"
+            android:text="@string/game_replay_first_turn"
             android:id="@+id/game_button_first"
             android:layout_weight="0.5"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button" />
 
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/prev_turn"
+            android:text="@string/game_replay_prev_turn"
             android:id="@+id/game_button_prev"
             android:layout_weight="0.5"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button" />
 
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1.5">
+            android:layout_weight="1.3">
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_gravity="center_vertical">
+                android:layout_height="match_parent">
 
-                <TextView
+                <LinearLayout
+                    android:orientation="horizontal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceLarge"
-                    android:text="0/0"
-                    android:id="@+id/game_text_game_position_1"
-                    android:layout_marginLeft="10dp"
-                    android:layout_marginRight="10dp"
-                    android:layout_weight="1.5"
-                    android:textAlignment="center"
-                    android:layout_gravity="center"
-                    android:textColor="@color/primary_text" />
-            </FrameLayout>
+                    android:layout_gravity="center">
 
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="0"
+                        android:id="@+id/game_text_game_position_1"
+                        android:textAlignment="center"
+                        android:textColor="@color/primary_text" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:text="0/0"
-                    android:id="@+id/game_text_game_position_2"
-                    android:layout_marginLeft="10dp"
-                    android:layout_marginRight="10dp"
-                    android:layout_weight="1.5"
-                    android:textAlignment="center"
-                    android:layout_gravity="center"
-                    android:textColor="@color/secondary_text" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text=" of "
+                        android:id="@+id/game_position_separator" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="0"
+                        android:id="@+id/game_text_game_position_2"
+                        android:textAlignment="center"
+                        android:textColor="@color/primary_text" />
+                </LinearLayout>
             </FrameLayout>
 
         </LinearLayout>
@@ -232,22 +244,22 @@
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/next_turn"
+            android:text="@string/game_replay_next_turn"
             android:id="@+id/game_button_next"
             android:layout_weight="0.5"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button" />
 
         <Button
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:text="@string/last_turn"
+            android:text="@string/game_replay_last_turn"
             android:id="@+id/game_button_last"
             android:layout_weight="0.5"
             android:layout_gravity="center_vertical"
             android:layout_margin="@dimen/spacing_small"
-            style="@style/button" />
+            style="@style/AppTheme.Button" />
     </LinearLayout>
 
 </LinearLayout>

@@ -88,14 +88,20 @@ public class GameActivityReplay extends GameActivityBase {
         redrawGame(gameReplay.getGameLogic());
     }
 
+    @Override
     protected void redrawGame(GameLogic gameLogic) {
-        super.redrawGame(gameLogic, gameLogic.getCurrentPlayerFigure());
+        super.redrawGame(gameLogic);
         if (gameReplay != null) {
             ((TextView) findViewById(R.id.game_cross_nick)).setText(gameReplay.getCrossPlayer().getName());
             ((TextView) findViewById(R.id.game_zero_nick)).setText(gameReplay.getZeroPlayer().getName());
 
-            ((TextView) findViewById(R.id.game_text_game_position_1)).setText(String.format("%d/%d",
-                    gameReplay.getCurrentEventNumber(), gameReplay.getEventCount()));
+            ((TextView) findViewById(R.id.game_text_game_position_1)).setText(String.format("%d", gameReplay.getCurrentEventNumber()));
+            ((TextView) findViewById(R.id.game_text_game_position_2)).setText(String.format("%d", gameReplay.getEventCount()));
+
+            findViewById(R.id.game_button_first).setEnabled(gameReplay.getCurrentEventNumber() > 1);
+            findViewById(R.id.game_button_prev).setEnabled(gameReplay.getCurrentEventNumber() > 1);
+            findViewById(R.id.game_button_next).setEnabled(gameReplay.getCurrentEventNumber() < gameReplay.getEventCount());
+            findViewById(R.id.game_button_last).setEnabled(gameReplay.getCurrentEventNumber() < gameReplay.getEventCount());
         }
     }
     @Override
@@ -105,11 +111,8 @@ public class GameActivityReplay extends GameActivityBase {
     }
 
     private void initButtons() {
-        if (gameReplay != null) {
-            BoardCellButton.loadDrawables(this, gameReplay.getCrossPlayer().getUser().getColorCross(),
-                    gameReplay.getZeroPlayer().getUser().getColorZero());
-        }
-
+        figureSet.setHueZero(gameReplay.getZeroPlayer().getUser().getColorZero());
+        figureSet.setHueCross(gameReplay.getCrossPlayer().getUser().getColorCross());
         findViewById(R.id.game_button_first).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -138,7 +141,6 @@ public class GameActivityReplay extends GameActivityBase {
                 redrawGame(gameReplay.getGameLogic());
             }
         });
-
     }
 
 }

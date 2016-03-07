@@ -12,7 +12,7 @@ dependencies {
     compile 'org.igniterealtime.smack:smack-tcp:4.1.4'
     compile 'org.igniterealtime.smack:smack-im:4.1.4'
     compile 'org.igniterealtime.smack:smack-debug:4.1.4'
-    compile 'com.google.code.gson:gson:2.5'
     compile 'mysql:mysql-connector-java:5.1.38'
+    compile 'com.google.code.gson:gson:2.6.1'
     compile project(':logic')
 }

@@ -17,11 +17,10 @@ public class HumanPlayer extends Player {
     }
 
     public static final User USER_ANONYMOUS = new User(
-            DBProvider.USER_ANONYMOUS,
-            "uniqueGoogleTokenForAnonymousPlayer",
-            //0, //DBOpenHelper.playerClasses[0]
-            "Anonymous", 1,
-            30, 210,
+            DBProvider.USER_ANONYMOUS_ID,
+            WoVPreferences.ANONYMOUS_GOOGLE_TOKEN,
+            WoVPreferences.ANONYMOUS_NICKNAME_STR, WoVPreferences.ANONYMOUS_NICKNAME_ID,
+            WoVPreferences.DEFAULT_CROSS_COLOR, WoVPreferences.DEFAULT_ZERO_COLOR,
             null);
 
     public static HumanPlayer deserialize(User user, GameLogic.PlayerFigure ownFigure, Context context) {
@@ -42,7 +41,9 @@ public class HumanPlayer extends Player {
 
     @Override
     public void makeTurn() {
-//        id = new Random().nextInt();
+        if (onGameStateChangedListener != null) {
+            onGameStateChangedListener.onGameStateChanged(game.getGameLogic());
+        }
     }
 
     @Override
