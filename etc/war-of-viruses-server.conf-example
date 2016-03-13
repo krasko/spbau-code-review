@@ -1,0 +1,23 @@
+# Loggers
+handlers=java.util.logging.ConsoleHandler
+.level=INFO
+
+java.util.logging.ConsoleHandler.level=ALL
+java.util.logging.ConsoleHandler.pattern=log.log
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+
+# Server
+google.projectId=555379223441
+google.apiKey=YOU-KNOW-IT-IS-A-SECRET
+db.server=localhost
+db.name=War-Of-Viruses
+db.user=wov
+db.password=
+
+# Real running
+gcm.server=gcm-xmpp.googleapis.com
+gcm.port=5235
+
+# SSH forwarding
+#gcm.server=localhost
+#gcm.port=5235

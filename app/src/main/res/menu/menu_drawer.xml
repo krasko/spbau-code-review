@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:id="@+id/group1">
+        <item
+            android:id="@+id/drawer_login"
+            android:title="Login" />
+
+        <item
+            android:id="@+id/drawer_logout"
+            android:title="Logout" />
+
+        <item
+            android:id="@+id/drawer_settings"
+            android:title="Settings" />
+    </group>
+
+    <group android:id="@+id/group2">
+        <item
+            android:id="@+id/drawer_clear_db"
+            android:title="Wipe local DB" />
+    </group>
+</menu>
